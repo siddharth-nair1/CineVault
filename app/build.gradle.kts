@@ -16,6 +16,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "TMDB_READ_ACCESS_TOKEN",
+            "\"${project.findProperty("tmdb.read.access.token") ?: ""}\""
+        )
     }
 
     buildTypes {
@@ -33,6 +38,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
