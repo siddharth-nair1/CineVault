@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
+
+// Read secrets from local.properties (NOT loaded automatically by Gradle)
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
+val tmdbReadAccessToken: String = localProperties.getProperty("tmdb.read.access.token") ?: ""
 
 android {
     namespace = "com.personal.cinevault"
@@ -16,11 +25,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField(
-            "String",
-            "TMDB_READ_ACCESS_TOKEN",
-            "\"${project.findProperty("tmdb.read.access.token") ?: ""}\""
-        )
+        buildConfigField("String", "TMDB_READ_ACCESS_TOKEN", "\"$tmdbReadAccessToken\"")
     }
 
     buildTypes {
