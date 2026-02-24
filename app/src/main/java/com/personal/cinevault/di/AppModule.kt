@@ -7,7 +7,9 @@ import com.personal.cinevault.data.remote.TmdbApiService
 import com.personal.cinevault.data.repository.MovieRepositoryImpl
 import com.personal.cinevault.domain.repository.MovieRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
+import com.personal.cinevault.domain.usecase.GetTrendingUseCase
 import com.personal.cinevault.domain.usecase.SearchMoviesUseCase
+import com.personal.cinevault.ui.screens.home.HomeViewModel
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailViewModel
 import com.personal.cinevault.ui.screens.search.SearchViewModel
 import org.koin.android.ext.koin.androidContext
@@ -31,18 +33,15 @@ val appModule = module {
         MovieRepositoryImpl(api = get(), cache = get())
     }
 
-    // ── Use Cases (factory = new instance per injection site) ─────────────────
+    // ── Use Cases ─────────────────────────────────────────────────────────────
     factory { SearchMoviesUseCase(repository = get()) }
     factory { GetMovieDetailsUseCase(repository = get()) }
+    factory { GetTrendingUseCase(repository = get()) }
 
     // ── ViewModels ────────────────────────────────────────────────────────────
+    viewModel { HomeViewModel(getTrendingUseCase = get()) }
     viewModel { SearchViewModel(searchMoviesUseCase = get()) }
-
-    // MovieDetailViewModel receives movieId as a runtime parameter via parametersOf
     viewModel { (movieId: Int) ->
-        MovieDetailViewModel(
-            movieId = movieId,
-            getMovieDetailsUseCase = get()
-        )
+        MovieDetailViewModel(movieId = movieId, getMovieDetailsUseCase = get())
     }
 }

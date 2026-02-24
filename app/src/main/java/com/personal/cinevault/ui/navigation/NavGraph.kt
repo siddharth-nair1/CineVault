@@ -7,7 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.personal.cinevault.ui.screens.DiaryScreen
-import com.personal.cinevault.ui.screens.HomeScreen
+import com.personal.cinevault.ui.screens.home.HomeScreen
 import com.personal.cinevault.ui.screens.ListsScreen
 import com.personal.cinevault.ui.screens.LogFilmScreen
 import com.personal.cinevault.ui.screens.ProfileScreen
