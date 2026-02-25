@@ -2,6 +2,7 @@ package com.personal.cinevault.ui.screens.logmovie
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.personal.cinevault.domain.model.LogEntry
 import com.personal.cinevault.domain.model.Movie
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.LogMovieUseCase
@@ -9,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -96,14 +98,26 @@ class LogMovieViewModel(
         viewModelScope.launch {
             _isSaving.value = true
             _error.value = null
-            logMovieUseCase(
+
+            // Convert display-scale (0.5–5.0) → storage-scale (1.0–10.0).
+            val storageRating = _rating.value.takeIf { it > 0f }?.let { it * 2f }
+
+            // Convert epoch-millis → ISO-8601 date string ("YYYY-MM-DD").
+            val watchedDateStr = Instant.ofEpochMilli(_watchedDate.value)
+                .atZone(ZoneId.systemDefault())
+                .toLocalDate()
+                .toString()
+
+            val entry = LogEntry(
                 movie = movie,
-                displayRating = _rating.value.takeIf { it > 0f },
+                rating = storageRating,
                 liked = _isLiked.value,
-                isRewatch = _isRewatch.value,
-                watchedDateMs = _watchedDate.value,
-                review = _reviewText.value
+                rewatch = _isRewatch.value,
+                review = _reviewText.value.trim().takeIf { it.isNotEmpty() },
+                watchedDate = watchedDateStr
             )
+
+            logMovieUseCase(entry)
                 .onSuccess { _saved.value = true }
                 .onFailure { _error.value = it.message ?: "Failed to save" }
             _isSaving.value = false

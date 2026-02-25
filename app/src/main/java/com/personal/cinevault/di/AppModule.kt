@@ -15,6 +15,7 @@ import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.GetTrendingUseCase
 import com.personal.cinevault.domain.usecase.LogMovieUseCase
 import com.personal.cinevault.domain.usecase.SearchMoviesUseCase
+import com.personal.cinevault.ui.screens.diary.DiaryViewModel
 import com.personal.cinevault.ui.screens.home.HomeViewModel
 import com.personal.cinevault.ui.screens.logmovie.LogMovieViewModel
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailViewModel
@@ -70,4 +71,5 @@ val appModule = module {
             logMovieUseCase = get()
         )
     }
+    viewModel { DiaryViewModel(logRepository = get()) }
 }
