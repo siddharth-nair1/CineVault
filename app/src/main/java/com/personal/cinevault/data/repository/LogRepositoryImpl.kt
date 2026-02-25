@@ -45,4 +45,10 @@ class LogRepositoryImpl(
      */
     override suspend fun deleteLog(entry: LogEntry) =
         dao.delete(entry.toEntity())
+
+    /**
+     * Load a single log entry by its [id], or `null` if not found in the table.
+     */
+    override suspend fun getLogById(id: Int): LogEntry? =
+        dao.getById(id)?.toDomain()
 }

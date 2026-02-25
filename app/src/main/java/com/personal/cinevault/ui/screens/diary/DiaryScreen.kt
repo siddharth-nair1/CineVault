@@ -1,7 +1,7 @@
 package com.personal.cinevault.ui.screens.diary
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,21 +17,29 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,11 +53,13 @@ import org.koin.androidx.compose.koinViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiaryScreen(
-    onMovieClick: (tmdbMovieId: Int) -> Unit,
+    /** Navigate to the LogMovie screen in edit mode for this entry. */
+    onEditLog: (logEntryId: Int, tmdbMovieId: Int) -> Unit,
     onSearchClick: () -> Unit,
     viewModel: DiaryViewModel = koinViewModel()
 ) {
     val items by viewModel.logs.collectAsStateWithLifecycle()
+    val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -86,45 +96,209 @@ fun DiaryScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             )
-            return@Scaffold
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
-        ) {
-            items(
-                items = items,
-                key = { item ->
-                    when (item) {
-                        is DiaryListItem.Header -> "header_${item.label}"
-                        is DiaryListItem.Entry  -> "entry_${item.log.id}_${item.log.tmdbMovieIdKey}"
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                items(
+                    items = items,
+                    key = { item ->
+                        when (item) {
+                            is DiaryListItem.Header -> "header_${item.label}"
+                            is DiaryListItem.Entry  -> "entry_${item.log.id}"
+                        }
+                    },
+                    contentType = { item ->
+                        when (item) {
+                            is DiaryListItem.Header -> "header"
+                            is DiaryListItem.Entry  -> "entry"
+                        }
                     }
-                },
-                contentType = { item ->
+                ) { item ->
                     when (item) {
-                        is DiaryListItem.Header -> "header"
-                        is DiaryListItem.Entry  -> "entry"
+                        is DiaryListItem.Header -> MonthHeader(label = item.label)
+                        is DiaryListItem.Entry  -> SwipeableLogEntryRow(
+                            entry = item.log,
+                            onEdit = { onEditLog(item.log.id, item.log.movie.id) },
+                            onDeleteRequested = { viewModel.requestDelete(item.log) }
+                        )
                     }
                 }
-            ) { item ->
-                when (item) {
-                    is DiaryListItem.Header -> MonthHeader(label = item.label)
-                    is DiaryListItem.Entry  -> LogEntryRow(
-                        entry = item.log,
-                        onClick = { onMovieClick(item.log.movie.id) }
+
+                item { Spacer(Modifier.height(88.dp)) }  // FAB clearance
+            }
+        }
+    }
+
+    // ── Delete confirmation dialog ────────────────────────────────────────────
+    pendingDelete?.let { entry ->
+        AlertDialog(
+            onDismissRequest = viewModel::cancelDelete,
+            title = { Text("Delete log entry?") },
+            text = {
+                Text(
+                    "Remove \"${entry.movie.title}\" from your diary? " +
+                    "This cannot be undone."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::confirmDelete
+                ) {
+                    Text(
+                        "Delete",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::cancelDelete) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+// ── Swipeable row ─────────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableLogEntryRow(
+    entry: LogEntry,
+    onEdit: () -> Unit,
+    onDeleteRequested: () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                // Request deletion (shows dialog) rather than dismissing immediately.
+                onDeleteRequested()
+            }
+            false  // always snap back — the dialog drives actual deletion
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = false,         // only right-to-left swipe
+        backgroundContent = {
+            val color by animateColorAsState(
+                targetValue = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart)
+                    MaterialTheme.colorScheme.errorContainer
+                else
+                    Color.Transparent,
+                label = "swipe_bg"
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(end = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+    ) {
+        LogEntryRow(entry = entry, onClick = onEdit)
+    }
+}
+
+// ── Log entry content row ─────────────────────────────────────────────────────
+
+@Composable
+private fun LogEntryRow(
+    entry: LogEntry,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Poster thumbnail
+            AsyncImage(
+                model = entry.movie.posterPath
+                    ?.let { "https://image.tmdb.org/t/p/w92$it" },
+                contentDescription = entry.movie.title,
+                modifier = Modifier
+                    .width(44.dp)
+                    .height(66.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            // Title + metadata
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = entry.movie.title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                val displayDate = entry.watchedDate
+                    ?.takeIf { it.length >= 10 }
+                    ?.let { iso ->
+                        runCatching {
+                            java.time.LocalDate.parse(iso)
+                                .format(
+                                    java.time.format.DateTimeFormatter
+                                        .ofPattern("d MMM yyyy")
+                                )
+                        }.getOrElse { iso }
+                    }
+                    ?: "Unknown date"
+
+                Text(
+                    text = displayDate,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                if (entry.rating != null && entry.rating > 0f) {
+                    HalfStarRating(
+                        rating = entry.rating / 2f,   // storage 0-10 → display 0-5
+                        onRatingChange = {},
+                        starSize = 14.dp,
+                        activeColor = MaterialTheme.colorScheme.primary,
+                        readOnly = true
                     )
                 }
             }
 
-            item { Spacer(Modifier.height(88.dp)) }  // FAB clearance
+            if (entry.liked) {
+                Icon(
+                    imageVector = Icons.Filled.Favorite,
+                    contentDescription = "Liked",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
 
-// ── Composable helpers ────────────────────────────────────────────────────────
+// ── Month header ──────────────────────────────────────────────────────────────
 
 @Composable
 private fun MonthHeader(label: String) {
@@ -143,84 +317,7 @@ private fun MonthHeader(label: String) {
     }
 }
 
-@Composable
-private fun LogEntryRow(
-    entry: LogEntry,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Poster thumbnail
-        AsyncImage(
-            model = entry.movie.posterPath
-                ?.let { "https://image.tmdb.org/t/p/w92$it" },
-            contentDescription = entry.movie.title,
-            modifier = Modifier
-                .width(44.dp)
-                .height(66.dp)
-                .clip(RoundedCornerShape(6.dp)),
-            contentScale = ContentScale.Crop
-        )
-
-        // Title + metadata
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = entry.movie.title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // Formatted watch date
-            val displayDate = entry.watchedDate
-                ?.takeIf { it.length >= 10 }
-                ?.let { iso ->
-                    runCatching {
-                        java.time.LocalDate.parse(iso)
-                            .format(java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy"))
-                    }.getOrElse { iso }
-                }
-                ?: "Unknown date"
-
-            Text(
-                text = displayDate,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // Star rating (read-only, display-scale: divide stored 0-10 by 2)
-            if (entry.rating != null && entry.rating > 0f) {
-                HalfStarRating(
-                    rating = entry.rating / 2f,       // storage 0-10 → display 0-5
-                    onRatingChange = {},
-                    starSize = 14.dp,
-                    activeColor = MaterialTheme.colorScheme.primary,
-                    readOnly = true
-                )
-            }
-        }
-
-        // Liked heart icon
-        if (entry.liked) {
-            Icon(
-                imageVector = Icons.Filled.Favorite,
-                contentDescription = "Liked",
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 @Composable
 private fun EmptyDiary(modifier: Modifier = Modifier) {
@@ -229,10 +326,7 @@ private fun EmptyDiary(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = "📽️",
-            style = MaterialTheme.typography.displayMedium
-        )
+        Text(text = "📽️", style = MaterialTheme.typography.displayMedium)
         Spacer(Modifier.height(16.dp))
         Text(
             text = "Your diary is empty",
@@ -247,8 +341,3 @@ private fun EmptyDiary(modifier: Modifier = Modifier) {
         )
     }
 }
-
-// ── Key helper ────────────────────────────────────────────────────────────────
-
-/** Stable unique key for LazyColumn derived from both entity id and tmdb id. */
-private val LogEntry.tmdbMovieIdKey get() = movie.id

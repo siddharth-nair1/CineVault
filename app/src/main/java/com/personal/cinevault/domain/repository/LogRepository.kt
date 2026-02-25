@@ -32,4 +32,10 @@ interface LogRepository {
      * Permanently delete a log entry. Uses [LogEntry.id] to identify the row.
      */
     suspend fun deleteLog(entry: LogEntry)
+
+    /**
+     * Load a single log entry by its local database id, or `null` if not found.
+     * Used by edit mode to pre-populate the [LogMovieViewModel] form.
+     */
+    suspend fun getLogById(id: Int): LogEntry?
 }

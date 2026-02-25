@@ -29,6 +29,13 @@ interface LogEntryDao {
     @Query("SELECT * FROM log_entries WHERE tmdbMovieId = :tmdbMovieId LIMIT 1")
     fun getLogForMovie(tmdbMovieId: Int): Flow<LogEntryEntity?>
 
+    /**
+     * Return the single log entry with the given primary key, or `null` if none
+     * exists. Used by the edit-mode flow in [LogMovieViewModel].
+     */
+    @Query("SELECT * FROM log_entries WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Int): LogEntryEntity?
+
     // ── Aggregate stats ──────────────────────────────────────────────────────
 
     /**

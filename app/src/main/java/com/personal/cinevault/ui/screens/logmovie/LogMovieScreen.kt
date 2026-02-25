@@ -68,7 +68,10 @@ import java.time.format.DateTimeFormatter
 fun LogMovieScreen(
     movieId: Int,
     onBack: () -> Unit,
-    viewModel: LogMovieViewModel = koinViewModel(parameters = { parametersOf(movieId) })
+    existingEntryId: Int = 0,
+    viewModel: LogMovieViewModel = koinViewModel(
+        parameters = { parametersOf(movieId, existingEntryId) }
+    )
 ) {
     val movie by viewModel.movie.collectAsStateWithLifecycle()
     val rating by viewModel.rating.collectAsStateWithLifecycle()
@@ -95,7 +98,7 @@ fun LogMovieScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Log Film") },
+                title = { Text(if (viewModel.isEditMode) "Edit Log" else "Log Film") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

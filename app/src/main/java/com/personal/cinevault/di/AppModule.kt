@@ -64,11 +64,13 @@ val appModule = module {
     viewModel { (movieId: Int) ->
         MovieDetailViewModel(movieId = movieId, getMovieDetailsUseCase = get())
     }
-    viewModel { (movieId: Int) ->
+    viewModel { (movieId: Int, existingEntryId: Int) ->
         LogMovieViewModel(
             movieId = movieId,
+            existingEntryId = existingEntryId,
             getMovieDetailsUseCase = get(),
-            logMovieUseCase = get()
+            logMovieUseCase = get(),
+            logRepository = get()
         )
     }
     viewModel { DiaryViewModel(logRepository = get()) }

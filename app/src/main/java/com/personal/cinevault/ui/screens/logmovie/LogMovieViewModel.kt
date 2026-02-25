@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.personal.cinevault.domain.model.LogEntry
 import com.personal.cinevault.domain.model.Movie
+import com.personal.cinevault.domain.repository.LogRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.LogMovieUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,8 +17,11 @@ import java.time.ZoneId
 
 class LogMovieViewModel(
     private val movieId: Int,
+    /** 0 = new entry; positive value = editing an existing entry with this Room id. */
+    private val existingEntryId: Int = 0,
     private val getMovieDetailsUseCase: GetMovieDetailsUseCase,
-    private val logMovieUseCase: LogMovieUseCase
+    private val logMovieUseCase: LogMovieUseCase,
+    private val logRepository: LogRepository
 ) : ViewModel() {
 
     // ── Movie detail ──────────────────────────────────────────────────────────
@@ -47,6 +51,11 @@ class LogMovieViewModel(
     private val _reviewText = MutableStateFlow("")
     val reviewText: StateFlow<String> = _reviewText.asStateFlow()
 
+    // ── Mode indicator ────────────────────────────────────────────────────────
+
+    /** True when editing an existing entry (pre-populated form), false for new entry. */
+    val isEditMode: Boolean get() = existingEntryId > 0
+
     // ── Save state ────────────────────────────────────────────────────────────
 
     private val _isSaving = MutableStateFlow(false)
@@ -63,6 +72,7 @@ class LogMovieViewModel(
 
     init {
         loadMovie()
+        if (existingEntryId > 0) loadExistingEntry()
     }
 
     private fun loadMovie() {
@@ -75,21 +85,41 @@ class LogMovieViewModel(
         }
     }
 
-    // ── Form events ───────────────────────────────────────────────────────────
+    /**
+     * Load the existing log entry in parallel with the movie details and
+     * pre-populate all form fields. Called only in edit mode.
+     */
+    private fun loadExistingEntry() {
+        viewModelScope.launch {
+            val entry = logRepository.getLogById(existingEntryId) ?: return@launch
 
-    /** Set half-star rating (0.5 … 5.0). Pass 0f to clear the rating. */
-    fun onRatingChange(stars: Float) {
-        _rating.value = stars.coerceIn(0f, 5f)
+            // Rating is stored at 0–10 scale; display is 0–5 (half-star).
+            _rating.value = (entry.rating ?: 0f) / 2f
+
+            _isLiked.value = entry.liked
+            _isRewatch.value = entry.rewatch
+            _reviewText.value = entry.review ?: ""
+
+            // Parse ISO date string → epoch-millis for the DatePicker.
+            _watchedDate.value = entry.watchedDate
+                ?.runCatching {
+                    LocalDate.parse(this)
+                        .atStartOfDay(ZoneId.of("UTC"))
+                        .toInstant()
+                        .toEpochMilli()
+                }
+                ?.getOrNull()
+                ?: todayAsEpochMillis()
+        }
     }
 
-    fun onLikedToggle() { _isLiked.value = !_isLiked.value }
+    // ── Form events ───────────────────────────────────────────────────────────
 
+    fun onRatingChange(stars: Float) { _rating.value = stars.coerceIn(0f, 5f) }
+    fun onLikedToggle()  { _isLiked.value   = !_isLiked.value   }
     fun onRewatchToggle() { _isRewatch.value = !_isRewatch.value }
-
-    /** Update watched date from the DatePicker. [epochMillis] is UTC midnight. */
     fun onDateChange(epochMillis: Long) { _watchedDate.value = epochMillis }
-
-    fun onReviewChange(text: String) { _reviewText.value = text }
+    fun onReviewChange(text: String)    { _reviewText.value  = text        }
 
     // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -109,6 +139,8 @@ class LogMovieViewModel(
                 .toString()
 
             val entry = LogEntry(
+                // Preserve the existing id in edit mode so Room does UPDATE, not INSERT.
+                id = existingEntryId,
                 movie = movie,
                 rating = storageRating,
                 liked = _isLiked.value,
