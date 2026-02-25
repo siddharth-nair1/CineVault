@@ -1,8 +1,6 @@
 package com.personal.cinevault.ui.screens.logmovie
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,7 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import com.personal.cinevault.ui.components.HalfStarRating
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -305,7 +301,7 @@ private fun RatingSection(
             style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        HalfStarRatingBar(
+        HalfStarRating(
             rating = rating,
             onRatingChange = onRatingChange,
             starSize = 36.dp
@@ -416,113 +412,4 @@ private fun DateSection(epochMillis: Long, onClick: () -> Unit) {
     }
 }
 
-// ── Half-Star Rating Bar ──────────────────────────────────────────────────────
 
-@Composable
-fun HalfStarRatingBar(
-    rating: Float,          // 0.0 … 5.0
-    onRatingChange: (Float) -> Unit,
-    starCount: Int = 5,
-    starSize: androidx.compose.ui.unit.Dp = 32.dp,
-    activeColor: Color = Color(0xFFF5C518),
-    inactiveColor: Color = Color(0xFF4A4A4A)
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        repeat(starCount) { starIndex ->
-            // Each star is split into two halves — left = half star, right = full star
-            val leftHalfValue  = starIndex + 0.5f
-            val fullStarValue  = starIndex + 1.0f
-
-            val starFillState = when {
-                rating >= fullStarValue  -> StarFillState.FULL
-                rating >= leftHalfValue  -> StarFillState.HALF
-                else                     -> StarFillState.EMPTY
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(starSize)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null  // suppress ripple inside rating bar
-                    ) {
-                        // Tapping the same full star again resets to 0 (clear rating)
-                        onRatingChange(
-                            if (rating == fullStarValue) 0f else fullStarValue
-                        )
-                    }
-            ) {
-                // Background (empty) star
-                Icon(
-                    imageVector = Icons.Outlined.StarOutline,
-                    contentDescription = null,
-                    tint = inactiveColor,
-                    modifier = Modifier.fillMaxSize()
-                )
-                // Foreground — conditionally filled
-                when (starFillState) {
-                    StarFillState.FULL -> Icon(
-                        imageVector = Icons.Filled.Star,
-                        contentDescription = "$fullStarValue stars",
-                        tint = activeColor,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                    StarFillState.HALF -> Box(
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        // Clip left half only
-                        Icon(
-                            imageVector = Icons.Filled.Star,
-                            contentDescription = "$leftHalfValue stars",
-                            tint = activeColor,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(
-                                    androidx.compose.foundation.shape.GenericShape { size, _ ->
-                                        lineTo(size.width / 2f, 0f)
-                                        lineTo(size.width / 2f, size.height)
-                                        lineTo(0f, size.height)
-                                        close()
-                                    }
-                                )
-                        )
-                    }
-                    StarFillState.EMPTY -> Unit
-                }
-
-                // Left half tap zone → half-star value
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize(0.5f)
-                        .align(Alignment.CenterStart)
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = null
-                        ) {
-                            onRatingChange(
-                                if (rating == leftHalfValue) 0f else leftHalfValue
-                            )
-                        }
-                )
-            }
-        }
-
-        // Label next to stars
-        if (rating > 0f) {
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = "${"%.1f".format(rating)}/5",
-                style = MaterialTheme.typography.labelLarge,
-                color = activeColor,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Start
-            )
-        }
-    }
-}
-
-private enum class StarFillState { FULL, HALF, EMPTY }
