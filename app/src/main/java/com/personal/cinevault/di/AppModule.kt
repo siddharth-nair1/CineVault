@@ -55,7 +55,7 @@ val appModule = module {
     factory { GetTrendingUseCase(repository = get()) }
 
     // ── ViewModels ────────────────────────────────────────────────────────────
-    viewModel { HomeViewModel(getTrendingUseCase = get()) }
+    viewModel { HomeViewModel(getTrendingUseCase = get(), logRepository = get()) }
     viewModel { SearchViewModel(searchMoviesUseCase = get()) }
     viewModel { (movieId: Int) ->
         MovieDetailViewModel(movieId = movieId, getMovieDetailsUseCase = get())
