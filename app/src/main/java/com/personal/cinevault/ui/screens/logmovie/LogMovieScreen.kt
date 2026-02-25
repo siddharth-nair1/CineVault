@@ -23,8 +23,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -39,7 +37,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,14 +51,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import com.personal.cinevault.ui.components.HalfStarRating
+import com.personal.cinevault.ui.components.ShowDatePickerDialog
+import com.personal.cinevault.ui.components.formatWatchDate
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -208,21 +205,11 @@ fun LogMovieScreen(
 
     // ── Date Picker Dialog ──────────────────────────────────────────────────────
     if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = watchedDate)
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { viewModel.onDateChange(it) }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
+        ShowDatePickerDialog(
+            initialDateMs = watchedDate,
+            onDateSelected = { viewModel.onDateChange(it) },
+            onDismiss = { showDatePicker = false }
+        )
     }
 }
 
@@ -384,11 +371,7 @@ private fun ToggleRow(
 
 @Composable
 private fun DateSection(epochMillis: Long, onClick: () -> Unit) {
-    val formatted = remember(epochMillis) {
-        Instant.ofEpochMilli(epochMillis)
-            .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("d MMMM yyyy"))
-    }
+    val formatted = remember(epochMillis) { formatWatchDate(epochMillis) }
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
