@@ -13,8 +13,10 @@ import com.personal.cinevault.domain.repository.MovieRepository
 import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.GetTrendingUseCase
+import com.personal.cinevault.domain.usecase.LogMovieUseCase
 import com.personal.cinevault.domain.usecase.SearchMoviesUseCase
 import com.personal.cinevault.ui.screens.home.HomeViewModel
+import com.personal.cinevault.ui.screens.logmovie.LogMovieViewModel
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailViewModel
 import com.personal.cinevault.ui.screens.search.SearchViewModel
 import org.koin.android.ext.koin.androidContext
@@ -53,11 +55,19 @@ val appModule = module {
     factory { SearchMoviesUseCase(repository = get()) }
     factory { GetMovieDetailsUseCase(repository = get()) }
     factory { GetTrendingUseCase(repository = get()) }
+    factory { LogMovieUseCase(logRepository = get()) }
 
     // ── ViewModels ────────────────────────────────────────────────────────────
     viewModel { HomeViewModel(getTrendingUseCase = get(), logRepository = get()) }
     viewModel { SearchViewModel(searchMoviesUseCase = get()) }
     viewModel { (movieId: Int) ->
         MovieDetailViewModel(movieId = movieId, getMovieDetailsUseCase = get())
+    }
+    viewModel { (movieId: Int) ->
+        LogMovieViewModel(
+            movieId = movieId,
+            getMovieDetailsUseCase = get(),
+            logMovieUseCase = get()
+        )
     }
 }
