@@ -13,7 +13,7 @@ import com.personal.cinevault.ui.screens.LogFilmScreen
 import com.personal.cinevault.ui.screens.ProfileScreen
 import com.personal.cinevault.ui.screens.SettingsScreen
 import com.personal.cinevault.ui.screens.StatsScreen
-import com.personal.cinevault.ui.screens.WatchlistScreen
+import com.personal.cinevault.ui.screens.watchlist.WatchlistScreen
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailScreen
 import com.personal.cinevault.ui.screens.search.SearchScreen
 

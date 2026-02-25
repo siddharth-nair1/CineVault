@@ -21,11 +21,6 @@ fun DiaryScreen(navController: NavController) {
     StubScreen("Diary")
 }
 
-// ── Watchlist ─────────────────────────────────────────────────────────────────
-@Composable
-fun WatchlistScreen(navController: NavController) {
-    StubScreen("Watchlist")
-}
 
 // ── Lists ─────────────────────────────────────────────────────────────────────
 @Composable

@@ -3,15 +3,19 @@ package com.personal.cinevault.ui.screens.moviedetail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.personal.cinevault.domain.model.Movie
+import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MovieDetailViewModel(
     private val movieId: Int,
-    private val getMovieDetailsUseCase: GetMovieDetailsUseCase
+    private val getMovieDetailsUseCase: GetMovieDetailsUseCase,
+    private val watchlistRepository: WatchlistRepository
 ) : ViewModel() {
 
     private val _movie = MutableStateFlow<Movie?>(null)
@@ -23,8 +27,17 @@ class MovieDetailViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _isInWatchlist = MutableStateFlow(false)
-    val isInWatchlist: StateFlow<Boolean> = _isInWatchlist.asStateFlow()
+    /**
+     * Reactive watchlist state for this movie, driven directly from Room.
+     * Emits `true` whenever a row for [movieId] exists in the watchlist table.
+     */
+    val isInWatchlist: StateFlow<Boolean> =
+        watchlistRepository.isInWatchlist(movieId)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = false
+            )
 
     init {
         loadMovie()
@@ -41,9 +54,19 @@ class MovieDetailViewModel(
         }
     }
 
+    /**
+     * Toggle the watchlist state for the currently loaded movie.
+     * Uses the live [isInWatchlist] value to decide whether to add or remove.
+     */
     fun toggleWatchlist() {
-        // TODO: wire up AddToWatchlistUseCase when Room is implemented
-        _isInWatchlist.value = !_isInWatchlist.value
+        val movie = _movie.value ?: return
+        viewModelScope.launch {
+            if (isInWatchlist.value) {
+                watchlistRepository.removeFromWatchlist(movieId)
+            } else {
+                watchlistRepository.addToWatchlist(movie)
+            }
+        }
     }
 
     fun retry() = loadMovie()

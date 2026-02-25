@@ -20,6 +20,7 @@ import com.personal.cinevault.ui.screens.home.HomeViewModel
 import com.personal.cinevault.ui.screens.logmovie.LogMovieViewModel
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailViewModel
 import com.personal.cinevault.ui.screens.search.SearchViewModel
+import com.personal.cinevault.ui.screens.watchlist.WatchlistViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
@@ -62,7 +63,11 @@ val appModule = module {
     viewModel { HomeViewModel(getTrendingUseCase = get(), logRepository = get()) }
     viewModel { SearchViewModel(searchMoviesUseCase = get()) }
     viewModel { (movieId: Int) ->
-        MovieDetailViewModel(movieId = movieId, getMovieDetailsUseCase = get())
+        MovieDetailViewModel(
+            movieId = movieId,
+            getMovieDetailsUseCase = get(),
+            watchlistRepository = get()
+        )
     }
     viewModel { (movieId: Int, existingEntryId: Int) ->
         LogMovieViewModel(
@@ -74,4 +79,5 @@ val appModule = module {
         )
     }
     viewModel { DiaryViewModel(logRepository = get()) }
+    viewModel { WatchlistViewModel(watchlistRepository = get()) }
 }
