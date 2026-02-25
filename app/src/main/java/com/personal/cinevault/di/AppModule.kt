@@ -5,8 +5,12 @@ import com.personal.cinevault.data.local.CacheDatabase
 import com.personal.cinevault.data.local.MovieCacheManager
 import com.personal.cinevault.data.local.PersonalDatabase
 import com.personal.cinevault.data.remote.TmdbApiService
+import com.personal.cinevault.data.repository.LogRepositoryImpl
 import com.personal.cinevault.data.repository.MovieRepositoryImpl
+import com.personal.cinevault.data.repository.WatchlistRepositoryImpl
+import com.personal.cinevault.domain.repository.LogRepository
 import com.personal.cinevault.domain.repository.MovieRepository
+import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.GetTrendingUseCase
 import com.personal.cinevault.domain.usecase.SearchMoviesUseCase
@@ -38,10 +42,12 @@ val appModule = module {
     // ── Cache ─────────────────────────────────────────────────────────────────
     single<MovieCacheManager> { MovieCacheManager(dao = get()) }
 
-    // ── Repository ────────────────────────────────────────────────────────────
+    // ── Repositories ──────────────────────────────────────────────────────────
     single<MovieRepository> {
         MovieRepositoryImpl(api = get(), cache = get(), gson = get())
     }
+    single<LogRepository>       { LogRepositoryImpl(dao = get()) }
+    single<WatchlistRepository> { WatchlistRepositoryImpl(dao = get()) }
 
     // ── Use Cases ─────────────────────────────────────────────────────────────
     factory { SearchMoviesUseCase(repository = get()) }
