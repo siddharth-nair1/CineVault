@@ -24,15 +24,14 @@ interface MovieCacheDao {
 
     /**
      * Return the cached entry for the given TMDB movie ID, or `null` on a
-     * cache miss. One-shot suspend function — callers should then check
-     * [MovieCacheEntity.isStale] before using the result.
+     * cache miss. Callers should check [MovieCacheEntity.isStale] before
+     * using the result.
      */
     @Query("SELECT * FROM movie_cache WHERE tmdbMovieId = :tmdbMovieId LIMIT 1")
     suspend fun getById(tmdbMovieId: Int): MovieCacheEntity?
 
     /**
      * Return the total number of rows currently in the cache table.
-     * Useful for monitoring cache size without loading all rows.
      */
     @Query("SELECT COUNT(*) FROM movie_cache")
     suspend fun getCount(): Int
@@ -41,8 +40,8 @@ interface MovieCacheDao {
 
     /**
      * Insert or replace a cached movie entry.
-     * [OnConflictStrategy.REPLACE] ensures the JSON and timestamps are
-     * refreshed when the same [MovieCacheEntity.tmdbMovieId] is re-fetched.
+     * [OnConflictStrategy.REPLACE] refreshes the JSON and timestamps when
+     * the same [MovieCacheEntity.tmdbMovieId] is re-fetched.
      */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(cacheEntry: MovieCacheEntity)
@@ -55,14 +54,14 @@ interface MovieCacheDao {
     @Query(
         "UPDATE movie_cache SET lastAccessedAt = :accessedAt WHERE tmdbMovieId = :tmdbMovieId"
     )
-    suspend fun updateLastAccessed(tmdbMovieId: Int, accessedAt: Long = System.currentTimeMillis())
+    suspend fun updateLastAccessed(
+        tmdbMovieId: Int,
+        accessedAt: Long = System.currentTimeMillis()
+    )
 
     /**
      * LRU eviction: delete all rows except the [keepCount] most recently
-     * accessed ones. The default limit of 500 keeps memory usage bounded.
-     *
-     * Rows are ordered by [lastAccessedAt] ascending so the oldest-accessed
-     * (least recently used) entries are removed first.
+     * accessed ones. Default limit of 500 keeps memory usage bounded.
      */
     @Query(
         """
@@ -79,8 +78,7 @@ interface MovieCacheDao {
 
     /**
      * TTL eviction: delete all rows whose [cachedAt] timestamp is older than
-     * [staleBeforeMs]. Pass `System.currentTimeMillis() - 7_days_in_ms` to
-     * remove anything cached more than 7 days ago.
+     * [staleBeforeMs]. Pass `System.currentTimeMillis() - 7_days_in_ms`.
      */
     @Query("DELETE FROM movie_cache WHERE cachedAt < :staleBeforeMs")
     suspend fun deleteStaleEntries(staleBeforeMs: Long)

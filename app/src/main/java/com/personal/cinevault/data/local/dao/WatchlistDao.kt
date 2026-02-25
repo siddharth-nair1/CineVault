@@ -25,7 +25,7 @@ interface WatchlistDao {
 
     /**
      * Return the watchlist entry for the given movie, or `null` if it is
-     * not in the watchlist. One-shot (suspend), not a Flow.
+     * not in the watchlist.
      */
     @Query("SELECT * FROM watchlist WHERE tmdbMovieId = :tmdbMovieId LIMIT 1")
     suspend fun getByMovieId(tmdbMovieId: Int): WatchlistEntity?
@@ -33,7 +33,7 @@ interface WatchlistDao {
     /**
      * Observe whether a specific movie is currently in the watchlist.
      * Emits `true` when a matching row exists, `false` otherwise.
-     * Useful for driving a toggle button in the UI reactively.
+     * Drives toggle buttons in the UI reactively without loading the full row.
      */
     @Query("SELECT EXISTS(SELECT 1 FROM watchlist WHERE tmdbMovieId = :tmdbMovieId)")
     fun isInWatchlist(tmdbMovieId: Int): Flow<Boolean>
@@ -43,8 +43,7 @@ interface WatchlistDao {
     /**
      * Add a movie to the watchlist.
      * Uses [OnConflictStrategy.IGNORE] because [WatchlistEntity.tmdbMovieId]
-     * has a unique index — a duplicate insert is silently dropped rather than
-     * causing an exception.
+     * has a unique index — a duplicate insert is silently dropped.
      */
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(watchlistEntry: WatchlistEntity)

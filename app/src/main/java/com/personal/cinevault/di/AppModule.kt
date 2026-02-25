@@ -1,5 +1,6 @@
 package com.personal.cinevault.di
 
+import com.google.gson.Gson
 import com.personal.cinevault.data.local.CacheDatabase
 import com.personal.cinevault.data.local.MovieCacheManager
 import com.personal.cinevault.data.local.PersonalDatabase
@@ -21,16 +22,25 @@ val appModule = module {
     // ── Network ───────────────────────────────────────────────────────────────
     single<TmdbApiService> { TmdbApiService.create() }
 
+    // ── JSON ──────────────────────────────────────────────────────────────────
+    single<Gson> { Gson() }
+
     // ── Databases ─────────────────────────────────────────────────────────────
-    single<PersonalDatabase> { PersonalDatabase.create(androidContext()) }
-    single<CacheDatabase>    { CacheDatabase.create(androidContext())    }
+    single<PersonalDatabase> { PersonalDatabase.getInstance(androidContext()) }
+    single<CacheDatabase>    { CacheDatabase.getInstance(androidContext())    }
+
+    // ── DAOs ──────────────────────────────────────────────────────────────────
+    single { get<PersonalDatabase>().logEntryDao() }
+    single { get<PersonalDatabase>().reviewDao() }
+    single { get<PersonalDatabase>().watchlistDao() }
+    single { get<CacheDatabase>().movieCacheDao() }
 
     // ── Cache ─────────────────────────────────────────────────────────────────
-    single<MovieCacheManager> { MovieCacheManager() }
+    single<MovieCacheManager> { MovieCacheManager(dao = get()) }
 
     // ── Repository ────────────────────────────────────────────────────────────
     single<MovieRepository> {
-        MovieRepositoryImpl(api = get(), cache = get())
+        MovieRepositoryImpl(api = get(), cache = get(), gson = get())
     }
 
     // ── Use Cases ─────────────────────────────────────────────────────────────
