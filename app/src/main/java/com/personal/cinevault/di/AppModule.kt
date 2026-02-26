@@ -8,10 +8,12 @@ import com.personal.cinevault.data.remote.TmdbApiService
 import com.personal.cinevault.data.repository.CineListRepositoryImpl
 import com.personal.cinevault.data.repository.LogRepositoryImpl
 import com.personal.cinevault.data.repository.MovieRepositoryImpl
+import com.personal.cinevault.data.repository.ReviewRepositoryImpl
 import com.personal.cinevault.data.repository.WatchlistRepositoryImpl
 import com.personal.cinevault.domain.repository.CineListRepository
 import com.personal.cinevault.domain.repository.LogRepository
 import com.personal.cinevault.domain.repository.MovieRepository
+import com.personal.cinevault.domain.repository.ReviewRepository
 import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.GetTrendingUseCase
@@ -24,6 +26,7 @@ import com.personal.cinevault.ui.screens.moviedetail.MovieDetailViewModel
 import com.personal.cinevault.ui.screens.mylists.CreateListViewModel
 import com.personal.cinevault.ui.screens.mylists.ListDetailViewModel
 import com.personal.cinevault.ui.screens.mylists.MyListsViewModel
+import com.personal.cinevault.ui.screens.reviews.ReviewsViewModel
 import com.personal.cinevault.ui.screens.search.SearchViewModel
 import com.personal.cinevault.ui.screens.watchlist.WatchlistViewModel
 import org.koin.android.ext.koin.androidContext
@@ -58,6 +61,7 @@ val appModule = module {
         MovieRepositoryImpl(api = get(), cache = get(), gson = get())
     }
     single<LogRepository>       { LogRepositoryImpl(dao = get()) }
+    single<ReviewRepository>    { ReviewRepositoryImpl(dao = get()) }
     single<WatchlistRepository> { WatchlistRepositoryImpl(dao = get()) }
     single<CineListRepository>  { CineListRepositoryImpl(listDao = get(), listMovieDao = get()) }
 
@@ -88,6 +92,7 @@ val appModule = module {
     }
     viewModel { DiaryViewModel(logRepository = get()) }
     viewModel { WatchlistViewModel(watchlistRepository = get()) }
+    viewModel { ReviewsViewModel(reviewRepository = get()) }
     viewModel { MyListsViewModel(repository = get()) }
     viewModel { CreateListViewModel(repository = get()) }
     viewModel { (listId: Int) -> ListDetailViewModel(listId = listId, repository = get()) }

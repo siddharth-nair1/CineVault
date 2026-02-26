@@ -30,6 +30,13 @@ interface ReviewDao {
     @Query("SELECT * FROM reviews WHERE tmdbMovieId = :tmdbMovieId ORDER BY updatedAt DESC")
     fun getReviewsForMovie(tmdbMovieId: Int): Flow<List<ReviewEntity>>
 
+    /**
+     * Load a single review by its primary key. Returns null if not found.
+     * One-shot suspend call — not reactive.
+     */
+    @Query("SELECT * FROM reviews WHERE id = :id LIMIT 1")
+    suspend fun getById(id: Int): ReviewEntity?
+
     // ── Writes ───────────────────────────────────────────────────────────────
 
     /**
