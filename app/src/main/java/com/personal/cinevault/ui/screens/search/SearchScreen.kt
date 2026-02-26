@@ -18,21 +18,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,17 +62,46 @@ private const val TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185"
 @Composable
 fun SearchScreen(
     navController: NavController,
+    /** Non-null when launched from a List Detail screen to add a movie. */
+    addToListId: Int? = null,
     viewModel: SearchViewModel = koinViewModel()
 ) {
-    val query by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val results by viewModel.searchResults.collectAsStateWithLifecycle()
-    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
-    val error by viewModel.error.collectAsStateWithLifecycle()
-    val keyboard = LocalSoftwareKeyboardController.current
+    // Sync addToListId into the ViewModel once on entry
+    LaunchedEffect(addToListId) { viewModel.setAddToListMode(addToListId) }
+
+    val query       by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val results     by viewModel.searchResults.collectAsStateWithLifecycle()
+    val isLoading   by viewModel.isLoading.collectAsStateWithLifecycle()
+    val error       by viewModel.error.collectAsStateWithLifecycle()
+    val addedMovie  by viewModel.addedMovie.collectAsStateWithLifecycle()
+    val keyboard    = LocalSoftwareKeyboardController.current
+    val snackbar    = remember { SnackbarHostState() }
+    val isAddMode   = addToListId != null
+
+    // Show confirmation snackbar when a movie is added
+    LaunchedEffect(addedMovie) {
+        val title = addedMovie ?: return@LaunchedEffect
+        snackbar.showSnackbar("\"$title\" added to list")
+        viewModel.onAddedMovieConsumed()
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Search Movies") })
+            TopAppBar(
+                title = { Text(if (isAddMode) "Add Movie to List" else "Search Movies") },
+                navigationIcon = {
+                    if (isAddMode) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    }
+                }
+            )
+        },
+        snackbarHost = {
+            SnackbarHost(hostState = snackbar) { data ->
+                Snackbar(snackbarData = data)
+            }
         }
     ) { padding ->
         Column(
@@ -80,10 +117,8 @@ fun SearchScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                placeholder = { Text("Search for movies…") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
-                },
+                placeholder = { Text(if (isAddMode) "Search movies to add…" else "Search for movies…") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
                         IconButton(onClick = {
@@ -100,22 +135,18 @@ fun SearchScreen(
                 keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() })
             )
 
-            // ── State: Loading / Error / Results / Empty ───────────────────────
+            // ── State ─────────────────────────────────────────────────────────
             when {
-                isLoading -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
 
-                error != null -> {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Error: $error",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "Error: $error",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
 
                 results.isEmpty() && query.isNotBlank() -> {
@@ -128,8 +159,15 @@ fun SearchScreen(
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(results, key = { it.id }) { movie ->
                             MovieSearchItem(
-                                movie = movie,
-                                onClick = { navController.navigate("movie/${movie.id}") }
+                                movie     = movie,
+                                isAddMode = isAddMode,
+                                onClick   = {
+                                    if (isAddMode) {
+                                        viewModel.addMovieToList(addToListId!!, movie)
+                                    } else {
+                                        navController.navigate("movie/${movie.id}")
+                                    }
+                                }
                             )
                         }
                     }
@@ -144,6 +182,7 @@ fun SearchScreen(
 @Composable
 private fun MovieSearchItem(
     movie: Movie,
+    isAddMode: Boolean,
     onClick: () -> Unit
 ) {
     Card(
@@ -201,15 +240,25 @@ private fun MovieSearchItem(
                 }
             }
 
-            // Rating badge
-            movie.rating?.let { rating ->
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "★ ${"%.1f".format(rating)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
+            Spacer(modifier = Modifier.width(8.dp))
+
+            if (isAddMode) {
+                // "Add" button in list-add mode
+                FilledTonalButton(onClick = onClick) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Add")
+                }
+            } else {
+                // Rating badge in normal mode
+                movie.rating?.let { rating ->
+                    Text(
+                        text = "★ ${"%.1f".format(rating)}",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

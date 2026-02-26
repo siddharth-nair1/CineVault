@@ -15,6 +15,7 @@ import com.personal.cinevault.ui.screens.StatsScreen
 import com.personal.cinevault.ui.screens.watchlist.WatchlistScreen
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailScreen
 import com.personal.cinevault.ui.screens.mylists.CreateListScreen
+import com.personal.cinevault.ui.screens.mylists.ListDetailScreen
 import com.personal.cinevault.ui.screens.mylists.MyListsScreen
 import com.personal.cinevault.ui.screens.search.SearchScreen
 
@@ -31,6 +32,7 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
         composable("home") {
             HomeScreen(navController)
         }
+        // Normal search — no addToListId
         composable("search") {
             SearchScreen(navController)
         }
@@ -44,7 +46,7 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             ProfileScreen(navController)
         }
 
-        // ── Deep destinations ──────────────────────────────────────────────────
+        // ── My Lists destinations ──────────────────────────────────────────────
         composable("lists") {
             MyListsScreen(navController)
         }
@@ -55,15 +57,30 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             route = "list/{id}",
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStack ->
-            val _listId = backStack.arguments!!.getInt("id")
-            // TODO: ListDetailScreen(listId = _listId, navController = navController)
+            val listId = backStack.arguments!!.getInt("id")
+            ListDetailScreen(listId = listId, navController = navController)
         }
-        composable("stats") {
-            StatsScreen(navController)
+
+        // ── Search in "add to list" mode: search?addToListId={id} ─────────────
+        composable(
+            route = "search?addToListId={addToListId}",
+            arguments = listOf(
+                navArgument("addToListId") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) { backStack ->
+            val raw = backStack.arguments!!.getInt("addToListId")
+            SearchScreen(
+                navController = navController,
+                addToListId   = if (raw == -1) null else raw
+            )
         }
-        composable("settings") {
-            SettingsScreen(navController)
-        }
+
+        // ── Deep destinations ──────────────────────────────────────────────────
+        composable("stats")    { StatsScreen(navController) }
+        composable("settings") { SettingsScreen(navController) }
 
         // ── Movie detail: movie/{id} ───────────────────────────────────────────
         composable(
@@ -74,7 +91,7 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             MovieDetailScreen(movieId = movieId, navController = navController)
         }
 
-        // ── Log film: log/{movieId} ───────────────────────────────────────────
+        // ── Log film: log/{movieId} ────────────────────────────────────────────
         composable(
             route = "log/{movieId}",
             arguments = listOf(navArgument("movieId") { type = NavType.IntType })
