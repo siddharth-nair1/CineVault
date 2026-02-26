@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.personal.cinevault.data.local.dao.CineListDao
+import com.personal.cinevault.data.local.dao.ListMovieDao
 import com.personal.cinevault.data.local.dao.LogEntryDao
 import com.personal.cinevault.data.local.dao.ReviewDao
 import com.personal.cinevault.data.local.dao.WatchlistDao
@@ -37,6 +39,8 @@ abstract class PersonalDatabase : RoomDatabase() {
     abstract fun logEntryDao(): LogEntryDao
     abstract fun reviewDao(): ReviewDao
     abstract fun watchlistDao(): WatchlistDao
+    abstract fun cineListDao(): CineListDao
+    abstract fun listMovieDao(): ListMovieDao
 
     companion object {
 

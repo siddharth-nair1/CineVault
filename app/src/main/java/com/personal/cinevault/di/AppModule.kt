@@ -5,9 +5,11 @@ import com.personal.cinevault.data.local.CacheDatabase
 import com.personal.cinevault.data.local.MovieCacheManager
 import com.personal.cinevault.data.local.PersonalDatabase
 import com.personal.cinevault.data.remote.TmdbApiService
+import com.personal.cinevault.data.repository.CineListRepositoryImpl
 import com.personal.cinevault.data.repository.LogRepositoryImpl
 import com.personal.cinevault.data.repository.MovieRepositoryImpl
 import com.personal.cinevault.data.repository.WatchlistRepositoryImpl
+import com.personal.cinevault.domain.repository.CineListRepository
 import com.personal.cinevault.domain.repository.LogRepository
 import com.personal.cinevault.domain.repository.MovieRepository
 import com.personal.cinevault.domain.repository.WatchlistRepository
@@ -41,6 +43,8 @@ val appModule = module {
     single { get<PersonalDatabase>().logEntryDao() }
     single { get<PersonalDatabase>().reviewDao() }
     single { get<PersonalDatabase>().watchlistDao() }
+    single { get<PersonalDatabase>().cineListDao() }
+    single { get<PersonalDatabase>().listMovieDao() }
     single { get<CacheDatabase>().movieCacheDao() }
 
     // ── Cache ─────────────────────────────────────────────────────────────────
@@ -52,6 +56,7 @@ val appModule = module {
     }
     single<LogRepository>       { LogRepositoryImpl(dao = get()) }
     single<WatchlistRepository> { WatchlistRepositoryImpl(dao = get()) }
+    single<CineListRepository>  { CineListRepositoryImpl(listDao = get(), listMovieDao = get()) }
 
     // ── Use Cases ─────────────────────────────────────────────────────────────
     factory { SearchMoviesUseCase(repository = get()) }
