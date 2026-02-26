@@ -32,15 +32,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -63,32 +59,32 @@ private const val TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w185"
 fun SearchScreen(
     navController: NavController,
     /** Non-null when launched from a List Detail screen to add a movie. */
-    addToListId: Int? = null,
+    addToListId: Long? = null,
     viewModel: SearchViewModel = koinViewModel()
 ) {
     // Sync addToListId into the ViewModel once on entry
     LaunchedEffect(addToListId) { viewModel.setAddToListMode(addToListId) }
 
-    val query       by viewModel.searchQuery.collectAsStateWithLifecycle()
-    val results     by viewModel.searchResults.collectAsStateWithLifecycle()
-    val isLoading   by viewModel.isLoading.collectAsStateWithLifecycle()
-    val error       by viewModel.error.collectAsStateWithLifecycle()
-    val addedMovie  by viewModel.addedMovie.collectAsStateWithLifecycle()
-    val keyboard    = LocalSoftwareKeyboardController.current
-    val snackbar    = remember { SnackbarHostState() }
-    val isAddMode   = addToListId != null
+    val query      by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val results    by viewModel.searchResults.collectAsStateWithLifecycle()
+    val isLoading  by viewModel.isLoading.collectAsStateWithLifecycle()
+    val error      by viewModel.error.collectAsStateWithLifecycle()
+    val movieAdded by viewModel.movieAdded.collectAsStateWithLifecycle()
+    val keyboard   = LocalSoftwareKeyboardController.current
+    val isAddMode  = addToListId != null
 
-    // Show confirmation snackbar when a movie is added
-    LaunchedEffect(addedMovie) {
-        val title = addedMovie ?: return@LaunchedEffect
-        snackbar.showSnackbar("\"$title\" added to list")
-        viewModel.onAddedMovieConsumed()
+    // Pop back to ListDetailScreen after a movie is successfully added
+    LaunchedEffect(movieAdded) {
+        if (movieAdded) {
+            viewModel.onMovieAddedConsumed()
+            navController.popBackStack()
+        }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isAddMode) "Add Movie to List" else "Search Movies") },
+                title = { Text(if (isAddMode) "Add to List" else "Search Movies") },
                 navigationIcon = {
                     if (isAddMode) {
                         IconButton(onClick = { navController.popBackStack() }) {
@@ -97,11 +93,6 @@ fun SearchScreen(
                     }
                 }
             )
-        },
-        snackbarHost = {
-            SnackbarHost(hostState = snackbar) { data ->
-                Snackbar(snackbarData = data)
-            }
         }
     ) { padding ->
         Column(

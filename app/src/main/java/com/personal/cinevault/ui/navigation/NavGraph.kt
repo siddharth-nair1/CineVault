@@ -66,15 +66,15 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             route = "search?addToListId={addToListId}",
             arguments = listOf(
                 navArgument("addToListId") {
-                    type = NavType.IntType
-                    defaultValue = -1
+                    type = NavType.LongType
+                    defaultValue = -1L
                 }
             )
         ) { backStack ->
-            val raw = backStack.arguments!!.getInt("addToListId")
+            val raw = backStack.arguments!!.getLong("addToListId")
             SearchScreen(
                 navController = navController,
-                addToListId   = if (raw == -1) null else raw
+                addToListId   = if (raw == -1L) null else raw
             )
         }
 

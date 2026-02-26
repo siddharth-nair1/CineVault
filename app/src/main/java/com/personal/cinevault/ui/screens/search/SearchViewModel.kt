@@ -31,17 +31,20 @@ class SearchViewModel(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     /** Non-null when this search is in "add to list" mode. */
-    private val _addToListId = MutableStateFlow<Int?>(null)
-    val addToListId: StateFlow<Int?> = _addToListId.asStateFlow()
+    private val _addToListId = MutableStateFlow<Long?>(null)
+    val addToListId: StateFlow<Long?> = _addToListId.asStateFlow()
 
-    /** Emits once when a movie has just been added — consumed by the UI to show a snackbar. */
-    private val _addedMovie = MutableStateFlow<String?>(null)
-    val addedMovie: StateFlow<String?> = _addedMovie.asStateFlow()
+    /**
+     * Emits once when a movie has just been successfully added to the list.
+     * The UI observes this to pop the back-stack.
+     */
+    private val _movieAdded = MutableStateFlow(false)
+    val movieAdded: StateFlow<Boolean> = _movieAdded.asStateFlow()
 
     private var searchJob: Job? = null
 
     /** Call from NavGraph after recomposing with the listId argument. */
-    fun setAddToListMode(listId: Int?) {
+    fun setAddToListMode(listId: Long?) {
         _addToListId.value = listId
     }
 
@@ -78,13 +81,13 @@ class SearchViewModel(
 
     /**
      * Add [movie] to the list identified by [listId].
-     * Emits the movie title to [addedMovie] so the UI can show a confirmation.
+     * Sets [movieAdded] to `true` so the UI can pop the back-stack.
      */
-    fun addMovieToList(listId: Int, movie: Movie) {
+    fun addMovieToList(listId: Long, movie: Movie) {
         viewModelScope.launch {
             cineListRepository.addMovieToList(
                 ListMovie(
-                    listId      = listId,
+                    listId      = listId.toInt(),
                     tmdbMovieId = movie.id,
                     movieTitle  = movie.title,
                     posterPath  = movie.posterPath,
@@ -92,12 +95,12 @@ class SearchViewModel(
                     releaseYear = movie.releaseYear?.toString()
                 )
             )
-            _addedMovie.value = movie.title
+            _movieAdded.value = true
         }
     }
 
-    /** Call after the UI has consumed the added-movie event. */
-    fun onAddedMovieConsumed() {
-        _addedMovie.value = null
+    /** Call after the UI has consumed the movieAdded event. */
+    fun onMovieAddedConsumed() {
+        _movieAdded.value = false
     }
 }
