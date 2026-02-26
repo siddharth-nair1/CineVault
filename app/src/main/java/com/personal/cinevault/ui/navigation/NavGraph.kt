@@ -8,13 +8,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.personal.cinevault.ui.screens.DiaryScreen
 import com.personal.cinevault.ui.screens.home.HomeScreen
-import com.personal.cinevault.ui.screens.ListsScreen
 import com.personal.cinevault.ui.screens.LogFilmScreen
 import com.personal.cinevault.ui.screens.ProfileScreen
 import com.personal.cinevault.ui.screens.SettingsScreen
 import com.personal.cinevault.ui.screens.StatsScreen
 import com.personal.cinevault.ui.screens.watchlist.WatchlistScreen
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailScreen
+import com.personal.cinevault.ui.screens.mylists.CreateListScreen
+import com.personal.cinevault.ui.screens.mylists.MyListsScreen
 import com.personal.cinevault.ui.screens.search.SearchScreen
 
 import androidx.compose.ui.Modifier
@@ -45,7 +46,17 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
 
         // ── Deep destinations ──────────────────────────────────────────────────
         composable("lists") {
-            ListsScreen(navController)
+            MyListsScreen(navController)
+        }
+        composable("create_list") {
+            CreateListScreen(navController)
+        }
+        composable(
+            route = "list/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { backStack ->
+            val _listId = backStack.arguments!!.getInt("id")
+            // TODO: ListDetailScreen(listId = _listId, navController = navController)
         }
         composable("stats") {
             StatsScreen(navController)

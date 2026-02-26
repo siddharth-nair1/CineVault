@@ -21,6 +21,8 @@ import com.personal.cinevault.ui.screens.diary.DiaryViewModel
 import com.personal.cinevault.ui.screens.home.HomeViewModel
 import com.personal.cinevault.ui.screens.logmovie.LogMovieViewModel
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailViewModel
+import com.personal.cinevault.ui.screens.mylists.CreateListViewModel
+import com.personal.cinevault.ui.screens.mylists.MyListsViewModel
 import com.personal.cinevault.ui.screens.search.SearchViewModel
 import com.personal.cinevault.ui.screens.watchlist.WatchlistViewModel
 import org.koin.android.ext.koin.androidContext
@@ -85,4 +87,6 @@ val appModule = module {
     }
     viewModel { DiaryViewModel(logRepository = get()) }
     viewModel { WatchlistViewModel(watchlistRepository = get()) }
+    viewModel { MyListsViewModel(repository = get()) }
+    viewModel { CreateListViewModel(repository = get()) }
 }
