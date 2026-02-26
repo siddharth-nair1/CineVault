@@ -1,6 +1,5 @@
 package com.personal.cinevault.data.repository
 
-import com.personal.cinevault.data.local.CineListMappers
 import com.personal.cinevault.data.local.dao.CineListDao
 import com.personal.cinevault.data.local.dao.ListMovieDao
 import com.personal.cinevault.data.local.toDomain
