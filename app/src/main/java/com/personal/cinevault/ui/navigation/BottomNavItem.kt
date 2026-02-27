@@ -19,5 +19,5 @@ val bottomNavItems = listOf(
     BottomNavItem("search",    "Films",     Icons.Default.Search),
     BottomNavItem("diary",     "Diary",     Icons.Default.Book),
     BottomNavItem("watchlist", "Watchlist", Icons.Default.Bookmarks),
-    BottomNavItem("profile",   "Profile",   Icons.Default.Person)
+    BottomNavItem("stats",     "Stats",     Icons.Default.Person)
 )
