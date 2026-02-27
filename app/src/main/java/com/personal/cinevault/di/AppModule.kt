@@ -19,6 +19,7 @@ import com.personal.cinevault.domain.repository.ReviewRepository
 import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.GetTrendingUseCase
+import com.personal.cinevault.domain.usecase.GetUserStatsUseCase
 import com.personal.cinevault.domain.usecase.LogMovieUseCase
 import com.personal.cinevault.domain.usecase.SaveReviewUseCase
 import com.personal.cinevault.domain.usecase.SearchMoviesUseCase
@@ -79,6 +80,7 @@ val appModule = module {
     factory { GetTrendingUseCase(repository = get()) }
     factory { LogMovieUseCase(logRepository = get()) }
     factory { SaveReviewUseCase(reviewRepository = get()) }
+    factory { GetUserStatsUseCase(logRepository = get()) }
 
     // ── ViewModels ────────────────────────────────────────────────────────────
     viewModel { HomeViewModel(getTrendingUseCase = get(), logRepository = get()) }
