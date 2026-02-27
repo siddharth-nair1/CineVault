@@ -15,11 +15,6 @@ fun HomeScreen(navController: NavController) {
     StubScreen("Home")
 }
 
-// ── Diary ─────────────────────────────────────────────────────────────────────
-@Composable
-fun DiaryScreen(navController: NavController) {
-    StubScreen("Diary")
-}
 
 
 // ── Lists ─────────────────────────────────────────────────────────────────────

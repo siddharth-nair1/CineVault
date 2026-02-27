@@ -6,7 +6,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.personal.cinevault.ui.screens.DiaryScreen
+import com.personal.cinevault.ui.screens.diary.DiaryScreen
 import com.personal.cinevault.ui.screens.home.HomeScreen
 import com.personal.cinevault.ui.screens.LogFilmScreen
 import com.personal.cinevault.ui.screens.ProfileScreen
@@ -39,7 +39,12 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             SearchScreen(navController)
         }
         composable("diary") {
-            DiaryScreen(navController)
+            DiaryScreen(
+                onEditLog = { logEntryId, tmdbMovieId ->
+                    navController.navigate("log/$tmdbMovieId?existingEntryId=$logEntryId")
+                },
+                onSearchClick = { navController.navigate("search") }
+            )
         }
         composable("watchlist") {
             WatchlistScreen(navController)
