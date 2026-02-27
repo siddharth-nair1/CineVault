@@ -17,13 +17,10 @@ import com.personal.cinevault.ui.screens.moviedetail.MovieDetailScreen
 import com.personal.cinevault.ui.screens.mylists.CreateListScreen
 import com.personal.cinevault.ui.screens.mylists.ListDetailScreen
 import com.personal.cinevault.ui.screens.mylists.MyListsScreen
+import com.personal.cinevault.ui.screens.reviews.ReviewDetailScreen
 import com.personal.cinevault.ui.screens.reviews.ReviewsScreen
 import com.personal.cinevault.ui.screens.search.SearchScreen
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 @Composable
@@ -94,11 +91,7 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStack ->
             val reviewId = backStack.arguments!!.getInt("id")
-            // TODO: ReviewDetailScreen(reviewId = reviewId, navController = navController)
-            // Placeholder — swap out once ReviewDetailScreen is built
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("Review #$reviewId")
-            }
+            ReviewDetailScreen(reviewId = reviewId.toLong(), navController = navController)
         }
 
         // ── Movie detail: movie/{id} ───────────────────────────────────────────
