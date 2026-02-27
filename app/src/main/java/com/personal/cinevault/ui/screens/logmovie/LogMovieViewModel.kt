@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.personal.cinevault.domain.model.LogEntry
 import com.personal.cinevault.domain.model.Movie
+import com.personal.cinevault.domain.model.Review
 import com.personal.cinevault.domain.repository.LogRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.LogMovieUseCase
+import com.personal.cinevault.domain.usecase.SaveReviewUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +23,8 @@ class LogMovieViewModel(
     private val existingEntryId: Int = 0,
     private val getMovieDetailsUseCase: GetMovieDetailsUseCase,
     private val logMovieUseCase: LogMovieUseCase,
-    private val logRepository: LogRepository
+    private val logRepository: LogRepository,
+    private val saveReviewUseCase: SaveReviewUseCase,
 ) : ViewModel() {
 
     // ── Movie detail ──────────────────────────────────────────────────────────
@@ -50,6 +53,10 @@ class LogMovieViewModel(
 
     private val _reviewText = MutableStateFlow("")
     val reviewText: StateFlow<String> = _reviewText.asStateFlow()
+
+    /** Whether the review text contains spoilers. */
+    private val _containsSpoilers = MutableStateFlow(false)
+    val containsSpoilers: StateFlow<Boolean> = _containsSpoilers.asStateFlow()
 
     // ── Mode indicator ────────────────────────────────────────────────────────
 
@@ -86,8 +93,10 @@ class LogMovieViewModel(
     }
 
     /**
-     * Load the existing log entry in parallel with the movie details and
-     * pre-populate all form fields. Called only in edit mode.
+     * Load the existing log entry and pre-populate all form fields.
+     * Also checks the reviews table for an existing review for this movie
+     * to restore the containsSpoilers flag.
+     * Called only in edit mode.
      */
     private fun loadExistingEntry() {
         viewModelScope.launch {
@@ -120,9 +129,15 @@ class LogMovieViewModel(
     fun onRewatchToggle() { _isRewatch.value = !_isRewatch.value }
     fun onDateChange(epochMillis: Long) { _watchedDate.value = epochMillis }
     fun onReviewChange(text: String)    { _reviewText.value  = text        }
+    fun onSpoilerToggle() { _containsSpoilers.value = !_containsSpoilers.value }
 
     // ── Save ──────────────────────────────────────────────────────────────────
 
+    /**
+     * Saves the log entry and — if the review text is non-blank —
+     * co-saves a [Review] record in the same coroutine scope so
+     * both writes are guaranteed to complete (or fail) together.
+     */
     fun save() {
         val movie = _movie.value ?: return
         viewModelScope.launch {
@@ -138,6 +153,8 @@ class LogMovieViewModel(
                 .toLocalDate()
                 .toString()
 
+            val trimmedReview = _reviewText.value.trim()
+
             val entry = LogEntry(
                 // Preserve the existing id in edit mode so Room does UPDATE, not INSERT.
                 id = existingEntryId,
@@ -145,13 +162,31 @@ class LogMovieViewModel(
                 rating = storageRating,
                 liked = _isLiked.value,
                 rewatch = _isRewatch.value,
-                review = _reviewText.value.trim().takeIf { it.isNotEmpty() },
+                review = trimmedReview.takeIf { it.isNotEmpty() },
                 watchedDate = watchedDateStr
             )
 
-            logMovieUseCase(entry)
+            // 1. Save the log entry.
+            val logResult = logMovieUseCase(entry)
+
+            // 2. If there's review text, co-save a Review record in the same coroutine.
+            if (logResult.isSuccess && trimmedReview.isNotEmpty()) {
+                val review = Review(
+                    tmdbMovieId = movie.id,
+                    movieTitle  = movie.title,
+                    posterPath  = movie.posterPath,
+                    content     = trimmedReview,
+                    rating      = storageRating,
+                    containsSpoilers = _containsSpoilers.value,
+                )
+                saveReviewUseCase(review)
+                    .onFailure { _error.value = it.message ?: "Review saved but failed to index" }
+            }
+
+            logResult
                 .onSuccess { _saved.value = true }
                 .onFailure { _error.value = it.message ?: "Failed to save" }
+
             _isSaving.value = false
         }
     }

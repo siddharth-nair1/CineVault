@@ -111,5 +111,25 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
             val movieId = backStack.arguments!!.getInt("movieId")
             LogFilmScreen(movieId = movieId, navController = navController)
         }
+
+        // ── Log film with optional pre-populated entry: log/{movieId}?existingEntryId={id} ──
+        composable(
+            route = "log/{movieId}?existingEntryId={existingEntryId}",
+            arguments = listOf(
+                navArgument("movieId") { type = NavType.IntType },
+                navArgument("existingEntryId") {
+                    type = NavType.IntType
+                    defaultValue = 0
+                }
+            )
+        ) { backStack ->
+            val movieId         = backStack.arguments!!.getInt("movieId")
+            val existingEntryId = backStack.arguments!!.getInt("existingEntryId")
+            com.personal.cinevault.ui.screens.logmovie.LogMovieScreen(
+                movieId = movieId,
+                existingEntryId = existingEntryId,
+                onBack = { navController.popBackStack() }
+            )
+        }
     }
 }

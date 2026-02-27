@@ -20,11 +20,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,7 +37,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,12 +52,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import com.personal.cinevault.ui.components.HalfStarRating
-import com.personal.cinevault.ui.components.ShowDatePickerDialog
-import com.personal.cinevault.ui.components.formatWatchDate
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.personal.cinevault.ui.components.HalfStarRating
+import com.personal.cinevault.ui.components.ShowDatePickerDialog
+import com.personal.cinevault.ui.components.formatWatchDate
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -76,6 +81,7 @@ fun LogMovieScreen(
     val isRewatch by viewModel.isRewatch.collectAsStateWithLifecycle()
     val watchedDate by viewModel.watchedDate.collectAsStateWithLifecycle()
     val reviewText by viewModel.reviewText.collectAsStateWithLifecycle()
+    val containsSpoilers by viewModel.containsSpoilers.collectAsStateWithLifecycle()
     val isSaving by viewModel.isSaving.collectAsStateWithLifecycle()
     val isLoadingMovie by viewModel.isLoadingMovie.collectAsStateWithLifecycle()
     val saved by viewModel.saved.collectAsStateWithLifecycle()
@@ -159,16 +165,12 @@ fun LogMovieScreen(
                     onClick = { showDatePicker = true }
                 )
 
-                // ── Review TextField ─────────────────────────────────────────────
-                OutlinedTextField(
-                    value = reviewText,
-                    onValueChange = viewModel::onReviewChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Notes / Review (optional)") },
-                    placeholder = { Text("What did you think?") },
-                    minLines = 4,
-                    maxLines = 8,
-                    shape = RoundedCornerShape(12.dp)
+                // ── Review Section ───────────────────────────────────────────────
+                ReviewSection(
+                    reviewText = reviewText,
+                    containsSpoilers = containsSpoilers,
+                    onReviewChange = viewModel::onReviewChange,
+                    onSpoilerToggle = viewModel::onSpoilerToggle,
                 )
 
                 // ── Save Button ──────────────────────────────────────────────────
@@ -398,4 +400,79 @@ private fun DateSection(epochMillis: Long, onClick: () -> Unit) {
     }
 }
 
+/**
+ * Prominent review section with a labelled card, multi-line text field,
+ * and a spoiler toggle chip below it.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReviewSection(
+    reviewText: String,
+    containsSpoilers: Boolean,
+    onReviewChange: (String) -> Unit,
+    onSpoilerToggle: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Section header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "✍  Your Review",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "· optional",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.outline
+            )
+        }
 
+        // Multi-line text field
+        OutlinedTextField(
+            value = reviewText,
+            onValueChange = onReviewChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    "Share your thoughts on this film…",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            },
+            minLines = 5,
+            maxLines = 12,
+            shape = RoundedCornerShape(14.dp),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                keyboardType = KeyboardType.Text
+            )
+        )
+
+        // Spoiler chip
+        FilterChip(
+            selected = containsSpoilers,
+            onClick = onSpoilerToggle,
+            label = {
+                Text(
+                    if (containsSpoilers) "Contains spoilers" else "Mark as spoiler",
+                    style = MaterialTheme.typography.labelMedium
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+            },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
+                selectedLabelColor = MaterialTheme.colorScheme.onErrorContainer,
+                selectedLeadingIconColor = MaterialTheme.colorScheme.onErrorContainer,
+            )
+        )
+    }
+}

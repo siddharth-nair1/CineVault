@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.BookmarkAdded
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.RateReview
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -30,6 +32,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.personal.cinevault.domain.model.LogEntry
 import com.personal.cinevault.domain.model.Movie
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -66,6 +70,7 @@ fun MovieDetailScreen(
     val isLoading   by viewModel.isLoading.collectAsStateWithLifecycle()
     val error       by viewModel.error.collectAsStateWithLifecycle()
     val inWatchlist by viewModel.isInWatchlist.collectAsStateWithLifecycle()
+    val logEntry    by viewModel.logEntry.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -102,8 +107,14 @@ fun MovieDetailScreen(
             movie != null -> MovieDetailContent(
                 movie       = movie!!,
                 inWatchlist = inWatchlist,
+                logEntry    = logEntry,
                 modifier    = Modifier.padding(padding),
-                onLogClick       = { navController.navigate("log/${movie!!.id}") },
+                onLogClick  = { navController.navigate("log/${movie!!.id}") },
+                onReviewClick = { entry ->
+                    // Navigate to the log screen pre-populated with the existing entry
+                    // so the user can edit/add a review in context.
+                    navController.navigate("log/${movie!!.id}?existingEntryId=${entry.id}")
+                },
                 onWatchlistClick = viewModel::toggleWatchlist
             )
         }
@@ -115,9 +126,11 @@ fun MovieDetailScreen(
 private fun MovieDetailContent(
     movie: Movie,
     inWatchlist: Boolean,
+    logEntry: LogEntry?,
     modifier: Modifier = Modifier,
     onLogClick: () -> Unit,
-    onWatchlistClick: () -> Unit
+    onReviewClick: (LogEntry) -> Unit,
+    onWatchlistClick: () -> Unit,
 ) {
     Column(
         modifier = modifier
@@ -205,30 +218,58 @@ private fun MovieDetailContent(
         Spacer(Modifier.height(24.dp))
 
         // ── Action buttons ─────────────────────────────────────────────────────
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Button(
-                onClick = onLogClick,
-                modifier = Modifier.weight(1f)
+            // Primary row: Log + Watchlist
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Log This Film")
+                Button(
+                    onClick = onLogClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(if (logEntry != null) "Edit Log" else "Log This Film")
+                }
+
+                FilledTonalButton(
+                    onClick = onWatchlistClick,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = if (inWatchlist) Icons.Default.BookmarkAdded
+                                      else             Icons.Default.BookmarkAdd,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(if (inWatchlist) "Watchlisted" else "Watchlist")
+                }
             }
 
-            FilledTonalButton(
-                onClick = onWatchlistClick,
-                modifier = Modifier.weight(1f)
-            ) {
-                Icon(
-                    imageVector = if (inWatchlist) Icons.Default.BookmarkAdded
-                                  else             Icons.Default.BookmarkAdd,
-                    contentDescription = null
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(if (inWatchlist) "Watchlisted" else "Watchlist")
+            // Secondary row: Write / Edit Review — only when movie has been logged
+            if (logEntry != null) {
+                val hasExistingReview = !logEntry.review.isNullOrBlank()
+                OutlinedButton(
+                    onClick = { onReviewClick(logEntry) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = if (hasExistingReview) Icons.Default.Edit
+                                      else                   Icons.Default.RateReview,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (hasExistingReview) "Edit Review" else "Write Review",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
         }
 

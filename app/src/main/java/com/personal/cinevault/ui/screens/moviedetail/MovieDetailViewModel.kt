@@ -2,7 +2,9 @@ package com.personal.cinevault.ui.screens.moviedetail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.personal.cinevault.domain.model.LogEntry
 import com.personal.cinevault.domain.model.Movie
+import com.personal.cinevault.domain.repository.LogRepository
 import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,7 +17,8 @@ import kotlinx.coroutines.launch
 class MovieDetailViewModel(
     private val movieId: Int,
     private val getMovieDetailsUseCase: GetMovieDetailsUseCase,
-    private val watchlistRepository: WatchlistRepository
+    private val watchlistRepository: WatchlistRepository,
+    private val logRepository: LogRepository,
 ) : ViewModel() {
 
     private val _movie = MutableStateFlow<Movie?>(null)
@@ -37,6 +40,19 @@ class MovieDetailViewModel(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
                 initialValue = false
+            )
+
+    /**
+     * Reactive log entry for this movie, or null if the movie has not been logged yet.
+     * The UI uses this to show "Write Review" vs "Edit Review" and to pass the
+     * existing entry id to the log screen.
+     */
+    val logEntry: StateFlow<LogEntry?> =
+        logRepository.getLogForMovie(movieId)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
             )
 
     init {

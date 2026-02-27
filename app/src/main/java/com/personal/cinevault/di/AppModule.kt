@@ -18,6 +18,7 @@ import com.personal.cinevault.domain.repository.WatchlistRepository
 import com.personal.cinevault.domain.usecase.GetMovieDetailsUseCase
 import com.personal.cinevault.domain.usecase.GetTrendingUseCase
 import com.personal.cinevault.domain.usecase.LogMovieUseCase
+import com.personal.cinevault.domain.usecase.SaveReviewUseCase
 import com.personal.cinevault.domain.usecase.SearchMoviesUseCase
 import com.personal.cinevault.ui.screens.diary.DiaryViewModel
 import com.personal.cinevault.ui.screens.home.HomeViewModel
@@ -71,6 +72,7 @@ val appModule = module {
     factory { GetMovieDetailsUseCase(repository = get()) }
     factory { GetTrendingUseCase(repository = get()) }
     factory { LogMovieUseCase(logRepository = get()) }
+    factory { SaveReviewUseCase(reviewRepository = get()) }
 
     // ── ViewModels ────────────────────────────────────────────────────────────
     viewModel { HomeViewModel(getTrendingUseCase = get(), logRepository = get()) }
@@ -79,7 +81,8 @@ val appModule = module {
         MovieDetailViewModel(
             movieId = movieId,
             getMovieDetailsUseCase = get(),
-            watchlistRepository = get()
+            watchlistRepository = get(),
+            logRepository = get()
         )
     }
     viewModel { (movieId: Int, existingEntryId: Int) ->
@@ -88,7 +91,8 @@ val appModule = module {
             existingEntryId = existingEntryId,
             getMovieDetailsUseCase = get(),
             logMovieUseCase = get(),
-            logRepository = get()
+            logRepository = get(),
+            saveReviewUseCase = get()
         )
     }
     viewModel { DiaryViewModel(logRepository = get()) }
