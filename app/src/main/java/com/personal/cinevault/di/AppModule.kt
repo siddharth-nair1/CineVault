@@ -33,6 +33,7 @@ import com.personal.cinevault.ui.screens.mylists.MyListsViewModel
 import com.personal.cinevault.ui.screens.reviews.ReviewDetailViewModel
 import com.personal.cinevault.ui.screens.reviews.ReviewsViewModel
 import com.personal.cinevault.ui.screens.search.SearchViewModel
+import com.personal.cinevault.ui.screens.stats.StatsViewModel
 import com.personal.cinevault.ui.screens.watchlist.WatchlistViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
@@ -111,4 +112,5 @@ val appModule = module {
     viewModel { CreateListViewModel(repository = get()) }
     viewModel { (listId: Int) -> ListDetailViewModel(listId = listId, repository = get()) }
     viewModel { com.personal.cinevault.ui.screens.settings.SettingsViewModel(preferences = get(), backupManager = get()) }
+    viewModel { StatsViewModel(getUserStatsUseCase = get()) }
 }

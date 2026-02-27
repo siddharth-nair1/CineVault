@@ -35,11 +35,6 @@ fun LogFilmScreen(movieId: Int, navController: NavController) {
     StubScreen("Log Film #$movieId")
 }
 
-// ── Stats ─────────────────────────────────────────────────────────────────────
-@Composable
-fun StatsScreen(navController: NavController) {
-    StubScreen("Stats")
-}
 
 // ── Generic stub ─────────────────────────────────────────────────────────────
 @Composable
