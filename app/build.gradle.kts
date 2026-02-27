@@ -92,6 +92,9 @@ dependencies {
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+    // DocumentFile — SAF tree URI helpers used by BackupWorker
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
     // Koin
     implementation("io.insert-koin:koin-android:3.5.0")
     implementation("io.insert-koin:koin-androidx-compose:3.5.0")

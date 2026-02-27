@@ -1,6 +1,7 @@
 package com.personal.cinevault.di
 
 import com.google.gson.Gson
+import com.personal.cinevault.data.backup.BackupManager
 import com.personal.cinevault.data.backup.CineVaultPreferences
 import com.personal.cinevault.data.local.CacheDatabase
 import com.personal.cinevault.data.local.MovieCacheManager
@@ -61,6 +62,7 @@ val appModule = module {
 
     // ── Preferences ───────────────────────────────────────────────────────────
     single { CineVaultPreferences(androidContext()) }
+    single { BackupManager(androidContext()) }
 
     // ── Repositories ──────────────────────────────────────────────────────────
     single<MovieRepository> {
