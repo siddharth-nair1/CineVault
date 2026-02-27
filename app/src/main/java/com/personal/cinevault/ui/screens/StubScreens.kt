@@ -41,12 +41,6 @@ fun StatsScreen(navController: NavController) {
     StubScreen("Stats")
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────────
-@Composable
-fun SettingsScreen(navController: NavController) {
-    StubScreen("Settings")
-}
-
 // ── Generic stub ─────────────────────────────────────────────────────────────
 @Composable
 private fun StubScreen(name: String) {

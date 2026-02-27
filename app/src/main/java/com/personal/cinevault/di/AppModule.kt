@@ -108,4 +108,5 @@ val appModule = module {
     viewModel { MyListsViewModel(repository = get()) }
     viewModel { CreateListViewModel(repository = get()) }
     viewModel { (listId: Int) -> ListDetailViewModel(listId = listId, repository = get()) }
+    viewModel { com.personal.cinevault.ui.screens.settings.SettingsViewModel(preferences = get(), backupManager = get()) }
 }

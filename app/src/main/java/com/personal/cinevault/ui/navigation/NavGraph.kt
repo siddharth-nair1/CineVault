@@ -10,7 +10,6 @@ import com.personal.cinevault.ui.screens.diary.DiaryScreen
 import com.personal.cinevault.ui.screens.home.HomeScreen
 import com.personal.cinevault.ui.screens.LogFilmScreen
 import com.personal.cinevault.ui.screens.ProfileScreen
-import com.personal.cinevault.ui.screens.SettingsScreen
 import com.personal.cinevault.ui.screens.StatsScreen
 import com.personal.cinevault.ui.screens.watchlist.WatchlistScreen
 import com.personal.cinevault.ui.screens.moviedetail.MovieDetailScreen
@@ -20,6 +19,7 @@ import com.personal.cinevault.ui.screens.mylists.MyListsScreen
 import com.personal.cinevault.ui.screens.reviews.ReviewDetailScreen
 import com.personal.cinevault.ui.screens.reviews.ReviewsScreen
 import com.personal.cinevault.ui.screens.search.SearchScreen
+import com.personal.cinevault.ui.screens.settings.SettingsScreen
 
 import androidx.compose.ui.Modifier
 
@@ -87,7 +87,7 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
 
         // ── Deep destinations ──────────────────────────────────────────────────
         composable("stats")    { StatsScreen(navController) }
-        composable("settings") { SettingsScreen(navController) }
+        composable("settings") { SettingsScreen(onBack = { navController.popBackStack() }) }
         composable("reviews")  { ReviewsScreen(navController) }
 
         // ── Review detail: review/{id} ────────────────────────────────────
