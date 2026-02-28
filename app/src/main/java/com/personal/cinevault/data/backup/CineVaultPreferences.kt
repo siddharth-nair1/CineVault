@@ -29,28 +29,29 @@ class CineVaultPreferences(private val context: Context) {
     // ── Keys ─────────────────────────────────────────────────────────────────
 
     companion object PreferencesKeys {
-        val BACKUP_FOLDER_URI  = stringPreferencesKey("backup_folder_uri")
+        /** Key is intentionally kept as "backup_folder_uri" for backward compatibility. */
+        val BACKUP_FILE_URI    = stringPreferencesKey("backup_folder_uri")
         val IS_DARK_THEME      = booleanPreferencesKey("is_dark_theme")
         val LAST_BACKUP_DATE   = stringPreferencesKey("last_backup_date")
         val IS_BACKUP_ENABLED  = booleanPreferencesKey("is_backup_enabled")
     }
 
-    // ── Backup folder URI ────────────────────────────────────────────────────
+    // ── Backup file URI ──────────────────────────────────────────────────────
 
-    /** Persist the SAF URI string chosen by the user for backup storage. */
-    suspend fun saveBackupFolderUri(uri: String) {
+    /** Persist the SAF file URI string created by ACTION_CREATE_DOCUMENT. */
+    suspend fun saveBackupFileUri(uri: String) {
         context.dataStore.edit { prefs ->
-            prefs[BACKUP_FOLDER_URI] = uri
+            prefs[BACKUP_FILE_URI] = uri
         }
     }
 
-    /** Returns the stored backup folder URI, or null if not yet set. */
-    suspend fun getBackupFolderUri(): String? =
-        context.dataStore.data.first()[BACKUP_FOLDER_URI]
+    /** Returns the stored backup file URI, or null if not yet set. */
+    suspend fun getBackupFileUri(): String? =
+        context.dataStore.data.first()[BACKUP_FILE_URI]
 
-    /** Observe the backup folder URI reactively. Emits null until a URI is saved. */
-    fun observeBackupFolderUri(): Flow<String?> =
-        context.dataStore.data.map { it[BACKUP_FOLDER_URI] }
+    /** Observe the backup file URI reactively. Emits null until a URI is saved. */
+    fun observeBackupFileUri(): Flow<String?> =
+        context.dataStore.data.map { it[BACKUP_FILE_URI] }
 
     // ── Dark theme ───────────────────────────────────────────────────────────
 

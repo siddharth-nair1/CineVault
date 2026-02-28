@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 
 private const val TAG = "SettingsViewModel"
 
@@ -35,41 +34,41 @@ class SettingsViewModel(
         viewModelScope.launch { preferences.setDarkTheme(dark) }
     }
 
-    // ── Backup folder ─────────────────────────────────────────────────────────
+    // ── Backup file URI ───────────────────────────────────────────────────────
 
-    val backupFolderUri: StateFlow<String?> = preferences.observeBackupFolderUri()
+    /** Observed by the UI to show the current backup file path. */
+    val backupFileUri: StateFlow<String?> = preferences.observeBackupFileUri()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val lastBackupDate: StateFlow<String?> = preferences.observeLastBackupDate()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /**
-     * Build an [Intent] for the system folder-picker (ACTION_OPEN_DOCUMENT_TREE).
-     * The UI should launch this via [ActivityResultLauncher].
+     * Build an [Intent] using ACTION_CREATE_DOCUMENT so the user can create a
+     * backup file directly inside Google Drive (or any provider).
+     *
+     * ACTION_CREATE_DOCUMENT works with Google Drive on all Android versions,
+     * unlike ACTION_OPEN_DOCUMENT_TREE which is broken for Drive on Android 11+.
      */
-    fun getBackupFolderIntent(): Intent =
-        Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
-            addFlags(
-                Intent.FLAG_GRANT_READ_URI_PERMISSION  or
-                Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
-                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or
-                Intent.FLAG_GRANT_PREFIX_URI_PERMISSION
-            )
+    fun getBackupFileIntent(): Intent =
+        Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+            addCategory(Intent.CATEGORY_OPENABLE)
+            type = "application/octet-stream"
+            putExtra(Intent.EXTRA_TITLE, "cinevault_backup.db")
         }
 
     /**
-     * Called after the user picks a folder. Persists the URI with a
-     * persistable permission grant so it survives app restarts, then
-     * (re-)schedules the daily backup worker.
+     * Called after the user creates/selects the backup file.
+     * Takes a persistable READ + WRITE grant so the URI survives app restarts,
+     * then schedules the nightly WorkManager task.
      */
-    fun onBackupFolderSelected(context: Context, uri: Uri) {
-        // Take persistable permission so we can access the folder after restart.
+    fun onBackupFileSelected(context: Context, uri: Uri) {
         context.contentResolver.takePersistableUriPermission(
             uri,
             Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         )
         viewModelScope.launch {
-            preferences.saveBackupFolderUri(uri.toString())
+            preferences.saveBackupFileUri(uri.toString())
             preferences.setBackupEnabled(true)
             backupManager.scheduleDaily()
         }
@@ -77,10 +76,6 @@ class SettingsViewModel(
 
     // ── Backup status ─────────────────────────────────────────────────────────
 
-    /**
-     * Human-readable status string derived from the WorkManager [WorkInfo].
-     * Defaults to "Not scheduled" until the worker runs.
-     */
     val backupStatus: StateFlow<String> = backupManager.getLastBackupStatus()
         .map { info ->
             when (info?.state) {
@@ -101,49 +96,50 @@ class SettingsViewModel(
     val manualBackupState: StateFlow<ManualBackupState> = _manualBackupState.asStateFlow()
 
     /**
-     * Kick off a one-shot backup on the calling coroutine. Writes progress to
-     * [manualBackupState] so the UI can show a spinner / result snackbar.
+     * Overwrite the single saved backup file URI with a fresh copy of the database.
+     * Does NOT require a folder; the URI already points to the exact file in Drive.
      */
     fun runManualBackup(context: Context) {
         if (_manualBackupState.value is ManualBackupState.Running) return
         viewModelScope.launch {
             _manualBackupState.value = ManualBackupState.Running
             try {
-                val folderUriStr = preferences.getBackupFolderUri()
+                val fileUriStr = preferences.getBackupFileUri()
                     ?: run {
-                        _manualBackupState.value = ManualBackupState.Error("No backup folder set")
+                        _manualBackupState.value =
+                            ManualBackupState.Error("No backup file set. Tap 'Set Backup File' first.")
                         return@launch
                     }
+
+                val fileUri    = Uri.parse(fileUriStr)
+                val sourceFile = context.getDatabasePath(PersonalDatabase.DB_NAME)
+                if (!sourceFile.exists()) {
+                    _manualBackupState.value = ManualBackupState.Error("Database file not found")
+                    return@launch
+                }
+
+                // Close Room so the WAL is fully checkpointed before we copy.
+                PersonalDatabase.getInstance(context).close()
+
+                // Overwrite the file at the persisted URI (works with Google Drive).
+                context.contentResolver
+                    .openOutputStream(fileUri, "wt")  // "wt" = write + truncate
+                    ?.use { out -> sourceFile.inputStream().use { inp -> inp.copyTo(out) } }
+                    ?: throw IllegalStateException("Cannot open output stream for $fileUri")
+
+                // Reopen the Room singleton.
+                PersonalDatabase.getInstance(context)
 
                 val today = java.time.LocalDate.now()
                     .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-                val backupName = "cinevault_backup_$today.db"
-                val folderUri = Uri.parse(folderUriStr)
-                val folderDoc = androidx.documentfile.provider.DocumentFile
-                    .fromTreeUri(context, folderUri)
-                    ?: run {
-                        _manualBackupState.value = ManualBackupState.Error("Cannot open backup folder")
-                        return@launch
-                    }
-
-                // Overwrite same-day file
-                folderDoc.findFile(backupName)?.delete()
-                val destDoc = folderDoc.createFile("application/octet-stream", backupName)
-                    ?: run {
-                        _manualBackupState.value = ManualBackupState.Error("Cannot create backup file")
-                        return@launch
-                    }
-
-                val sourceFile = context.getDatabasePath(PersonalDatabase.DB_NAME)
-                context.contentResolver.openOutputStream(destDoc.uri)?.use { out ->
-                    sourceFile.inputStream().use { it.copyTo(out) }
-                }
-
                 preferences.saveLastBackupDate(today)
-                _manualBackupState.value = ManualBackupState.Success("Backup saved: $backupName")
-                Log.i(TAG, "Manual backup → $backupName")
+
+                _manualBackupState.value = ManualBackupState.Success("Backup saved to Google Drive")
+                Log.i(TAG, "Manual backup → $fileUri")
             } catch (e: Exception) {
                 Log.e(TAG, "Manual backup failed", e)
+                // Make sure Room is back up even if backup failed.
+                runCatching { PersonalDatabase.getInstance(context) }
                 _manualBackupState.value = ManualBackupState.Error(e.message ?: "Backup failed")
             }
         }
@@ -155,14 +151,12 @@ class SettingsViewModel(
 
     /**
      * Build an [Intent] for the system file-picker to select a `.db` backup
-     * file. The UI should launch this via [ActivityResultLauncher].
+     * file. ACTION_OPEN_DOCUMENT works fine with Google Drive — no change needed.
      */
     fun getRestoreFileIntent(): Intent =
         Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
             addCategory(Intent.CATEGORY_OPENABLE)
             type = "application/octet-stream"
-            // Allow .db files — some providers report them as octet-stream,
-            // others may need a wildcard.
             putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/octet-stream", "*/*"))
         }
 
@@ -182,14 +176,12 @@ class SettingsViewModel(
                 db.close()
 
                 val destFile = context.getDatabasePath(PersonalDatabase.DB_NAME)
-                // Ensure parent directory exists (it always should, but be safe)
                 destFile.parentFile?.mkdirs()
 
                 context.contentResolver.openInputStream(uri)?.use { inp ->
                     destFile.outputStream().use { out -> inp.copyTo(out) }
                 } ?: throw IllegalStateException("Cannot open restore file")
 
-                // Re-open the singleton (next access triggers rebuild)
                 PersonalDatabase.getInstance(context)
 
                 _restoreState.value = RestoreState.Success
@@ -197,7 +189,6 @@ class SettingsViewModel(
             } catch (e: Exception) {
                 Log.e(TAG, "Restore failed", e)
                 _restoreState.value = RestoreState.Error(e.message ?: "Restore failed")
-                // Try to re-open DB even on failure so the app stays functional
                 runCatching { PersonalDatabase.getInstance(context) }
             }
         }

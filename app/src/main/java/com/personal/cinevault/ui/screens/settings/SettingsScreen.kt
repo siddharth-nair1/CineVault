@@ -65,7 +65,7 @@ fun SettingsScreen(
     val context = LocalContext.current
 
     val isDarkTheme     by viewModel.isDarkTheme.collectAsStateWithLifecycle()
-    val folderUri       by viewModel.backupFolderUri.collectAsStateWithLifecycle()
+    val fileUri         by viewModel.backupFileUri.collectAsStateWithLifecycle()
     val lastBackupDate  by viewModel.lastBackupDate.collectAsStateWithLifecycle()
     val backupStatus    by viewModel.backupStatus.collectAsStateWithLifecycle()
     val manualState     by viewModel.manualBackupState.collectAsStateWithLifecycle()
@@ -102,10 +102,11 @@ fun SettingsScreen(
     }
 
     // ── Activity result launchers ──────────────────────────────────────────────
-    val folderPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.onBackupFolderSelected(context, it) }
+    val filePicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val uri = result.data?.data
+        uri?.let { viewModel.onBackupFileSelected(context, it) }
     }
 
     val restorePicker = rememberLauncherForActivityResult(
@@ -178,13 +179,13 @@ fun SettingsScreen(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     },
-                    label = "Backup folder",
-                    subtitle = folderUri
-                        ?.let { Uri.parse(it).lastPathSegment ?: "Folder selected" }
+                    label = "Backup file",
+                    subtitle = fileUri
+                        ?.let { Uri.parse(it).lastPathSegment ?: "File selected" }
                         ?: "Not set"
                 ) {
                     OutlinedButton(
-                        onClick = { folderPicker.launch(null) },
+                        onClick = { filePicker.launch(viewModel.getBackupFileIntent()) },
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("Choose")
@@ -218,7 +219,7 @@ fun SettingsScreen(
                 Button(
                     onClick = { viewModel.runManualBackup(context) },
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = manualState !is ManualBackupState.Running && folderUri != null,
+                    enabled = manualState !is ManualBackupState.Running && fileUri != null,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
