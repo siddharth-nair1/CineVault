@@ -86,7 +86,7 @@ fun NavGraph(navController: NavHostController, modifier: Modifier = Modifier) {
         }
 
         // ── Deep destinations ──────────────────────────────────────────────────
-        composable("stats")    { StatsScreen() }
+        composable("stats")    { StatsScreen(navController) }
         composable("settings") { SettingsScreen(onBack = { navController.popBackStack() }) }
         composable("reviews")  { ReviewsScreen(navController) }
 
