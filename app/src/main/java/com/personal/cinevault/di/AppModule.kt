@@ -66,6 +66,18 @@ val appModule = module {
     single { CineVaultPreferences(androidContext()) }
     single { BackupManager(androidContext()) }
 
+    // ── Importers ─────────────────────────────────────────────────────────────
+    single { 
+        com.personal.cinevault.data.import.LetterboxdImporter(
+            tmdbApi = get(),
+            logDao = get(),
+            reviewDao = get(),
+            watchlistDao = get(),
+            cineListDao = get(),
+            listMovieDao = get()
+        ) 
+    }
+
     // ── Repositories ──────────────────────────────────────────────────────────
     single<MovieRepository> {
         MovieRepositoryImpl(api = get(), cache = get(), gson = get())
@@ -112,5 +124,6 @@ val appModule = module {
     viewModel { CreateListViewModel(repository = get()) }
     viewModel { (listId: Int) -> ListDetailViewModel(listId = listId, repository = get()) }
     viewModel { com.personal.cinevault.ui.screens.settings.SettingsViewModel(preferences = get(), backupManager = get()) }
+    viewModel { com.personal.cinevault.ui.screens.settings.ImportViewModel(importer = get()) }
     viewModel { StatsViewModel(getUserStatsUseCase = get()) }
 }
