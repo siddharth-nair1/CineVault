@@ -188,7 +188,7 @@ fun SettingsScreen(
                         onClick = { filePicker.launch(viewModel.getBackupFileIntent()) },
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text("Choose")
+                        Text("Set File on Google Drive")
                     }
                 }
 
